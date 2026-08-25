@@ -4275,7 +4275,7 @@ function buildAssessmentHTML(day){
 function buildCompetencyHTML(day){
   const items=COMPETENCY_CHECKS[day];
   if(!items) return '';
-  return `<section class="competency-card"><div class="assessment-kicker">Competency Checkpoint</div><h3>Can you actually do this?</h3><p>These are observable skills, not a quiz score. You do not need perfection, but if several items are still uncertain, revisit the specific lesson instead of adding more difficulty.</p><ul class="competency-list">${items.map((it,i)=>`<li><input type="checkbox" data-checklist-key="comp-${day}-${i}" aria-label="Competency item ${i+1}"><span>${it.text}<span class="competency-revisit">${it.revisit}</span></span></li>`).join('')}</ul></section>`;
+  return `<section class="competency-card"><div class="assessment-kicker">Competency Checkpoint</div><h3>Can you actually do this?</h3><p>These are observable skills, not a quiz score. You do not need perfection, but if several items are still uncertain, revisit the specific lesson instead of adding more difficulty.</p><ul class="competency-list">${items.map((it,i)=>`<li><input type="checkbox" data-checklist-key="comp-${day}-${i}"><span>${it.text}<span class="competency-revisit">${it.revisit}</span></span></li>`).join('')}</ul></section>`;
 }
 
 /* ============ PASS 3 — PRIMARY DAILY CONTENT ============
@@ -5155,8 +5155,22 @@ function saveProgress(){
     console.warn('Progress could not be saved — it will reset on reload.', e);
   }
 }
+function setChecklistAriaLabel(cb){
+  if(!cb || cb.getAttribute('aria-label')) return;
+  const row = cb.closest('li');
+  let label = '';
+  if(row){
+    const clone = row.cloneNode(true);
+    clone.querySelectorAll('input').forEach(el=>el.remove());
+    clone.querySelectorAll('.competency-revisit').forEach(el=>el.remove());
+    label = clone.textContent ? clone.textContent.replace(/\s+/g,' ').trim() : '';
+  }
+  if(label) cb.setAttribute('aria-label', label);
+}
 function syncChecklistCheckboxes(key, checked){
-  document.querySelectorAll('input[data-checklist-key="'+key+'"]').forEach(cb=>{ cb.checked = checked; });
+  document.querySelectorAll('input[data-checklist-key="'+key+'"]').forEach(cb=>{
+    cb.checked = checked;
+  });
 }
 function isLessonComplete(day){
   if(finishedState[day]) return true;
@@ -5463,11 +5477,17 @@ function openMobileSidebar(){
   primarySidebar.classList.add('open');
   sidebarBackdrop.classList.add('open');
   mobileMenuBtn.setAttribute('aria-expanded','true');
+  mobileMenuBtn.setAttribute('aria-label','Close menu');
+  const firstNav = primarySidebar.querySelector('.nav-item');
+  if(firstNav && typeof firstNav.focus === 'function') firstNav.focus();
 }
 function closeMobileSidebar(){
+  const activeInSidebar = primarySidebar.contains(document.activeElement);
   primarySidebar.classList.remove('open');
   sidebarBackdrop.classList.remove('open');
   mobileMenuBtn.setAttribute('aria-expanded','false');
+  mobileMenuBtn.setAttribute('aria-label','Open menu');
+  if(activeInSidebar && typeof mobileMenuBtn.focus === 'function') mobileMenuBtn.focus();
 }
 mobileMenuBtn.addEventListener('click', ()=>{
   primarySidebar.classList.contains('open') ? closeMobileSidebar() : openMobileSidebar();
@@ -5485,7 +5505,7 @@ function switchView(view){
   if(view === 'home') renderHomeFocus();
   if(view === 'learnmore') renderLearnMore();
   if(view === 'progress'){ renderProgressChecklists(); renderMeaningfulProgress(); updateProgressStats(); }
-  window.scrollTo({top:0, behavior:'instant'});
+  window.scrollTo({top:0, behavior:'auto'});
 }
 
 function openLesson(day){
@@ -5502,7 +5522,7 @@ function openLesson(day){
   }
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   closeMobileSidebar();
-  window.scrollTo({top:0, behavior:'instant'});
+  window.scrollTo({top:0, behavior:'auto'});
 }
 
 /* ---------- SHARED LESSON CARD BUILDER (used by both Home and the full lesson view) ---------- */
@@ -5832,6 +5852,7 @@ function bindLessonChapterEvents(container){
   });
   container.querySelectorAll('.checklist input[type=checkbox], .competency-list input[type=checkbox]').forEach(cb=>{
     const key = cb.dataset.checklistKey;
+    setChecklistAriaLabel(cb);
     if(checklistState[key]) cb.checked = true;
     cb.addEventListener('change', ()=>{
       checklistState[key] = cb.checked;
@@ -8386,7 +8407,7 @@ function openArticle(i, origin){
   document.getElementById('view-article-full').classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   closeMobileSidebar();
-  window.scrollTo({top:0, behavior:'instant'});
+  window.scrollTo({top:0, behavior:'auto'});
 }
 document.getElementById('articleBackLink').addEventListener('click', (e)=>{
   e.preventDefault();
@@ -8636,6 +8657,7 @@ function renderProgressChecklists(){
   });
   el.querySelectorAll('input[type=checkbox]').forEach(cb=>{
     const key = cb.dataset.checklistKey;
+    setChecklistAriaLabel(cb);
     if(checklistState[key]) cb.checked = true;
     cb.addEventListener('change', ()=>{
       checklistState[key] = cb.checked;
