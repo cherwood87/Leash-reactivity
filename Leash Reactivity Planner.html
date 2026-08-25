@@ -4275,7 +4275,7 @@ function buildAssessmentHTML(day){
 function buildCompetencyHTML(day){
   const items=COMPETENCY_CHECKS[day];
   if(!items) return '';
-  return `<section class="competency-card"><div class="assessment-kicker">Competency Checkpoint</div><h3>Can you actually do this?</h3><p>These are observable skills, not a quiz score. You do not need perfection, but if several items are still uncertain, revisit the specific lesson instead of adding more difficulty.</p><ul class="competency-list">${items.map((it,i)=>`<li><input type="checkbox" data-checklist-key="comp-${day}-${i}" aria-label="${String(it.text).replace(/"/g,'&quot;')}"><span>${it.text}<span class="competency-revisit">${it.revisit}</span></span></li>`).join('')}</ul></section>`;
+  return `<section class="competency-card"><div class="assessment-kicker">Competency Checkpoint</div><h3>Can you actually do this?</h3><p>These are observable skills, not a quiz score. You do not need perfection, but if several items are still uncertain, revisit the specific lesson instead of adding more difficulty.</p><ul class="competency-list">${items.map((it,i)=>`<li><input type="checkbox" data-checklist-key="comp-${day}-${i}"><span>${it.text}<span class="competency-revisit">${it.revisit}</span></span></li>`).join('')}</ul></section>`;
 }
 
 /* ============ PASS 3 — PRIMARY DAILY CONTENT ============
@@ -5158,14 +5158,18 @@ function saveProgress(){
 function setChecklistAriaLabel(cb){
   if(!cb || cb.getAttribute('aria-label')) return;
   const row = cb.closest('li');
-  const textEl = row ? row.querySelector('span') : null;
-  const label = (textEl && textEl.textContent ? textEl.textContent : '').trim();
+  let label = '';
+  if(row){
+    const clone = row.cloneNode(true);
+    clone.querySelectorAll('input').forEach(el=>el.remove());
+    clone.querySelectorAll('.competency-revisit').forEach(el=>el.remove());
+    label = clone.textContent ? clone.textContent.replace(/\s+/g,' ').trim() : '';
+  }
   if(label) cb.setAttribute('aria-label', label);
 }
 function syncChecklistCheckboxes(key, checked){
   document.querySelectorAll('input[data-checklist-key="'+key+'"]').forEach(cb=>{
     cb.checked = checked;
-    setChecklistAriaLabel(cb);
   });
 }
 function isLessonComplete(day){
@@ -8647,12 +8651,13 @@ function renderProgressChecklists(){
     box.style.marginBottom = '12px';
     box.innerHTML = '<div class="box-head"><div class="ic ic-green">✅</div><div class="box-title green">Lesson '+day+' — '+c.title+'</div></div>'+
       '<div class="box-body"><ul class="checklist">'+
-      c.checklist.map((item,i)=>'<li><input type="checkbox" data-checklist-key="'+day+'-'+i+'" aria-label="'+escapeHTML(item)+'"><span>'+item+'</span></li>').join('')+
+      c.checklist.map((item,i)=>'<li><input type="checkbox" data-checklist-key="'+day+'-'+i+'"><span>'+item+'</span></li>').join('')+
       '</ul></div>';
     el.appendChild(box);
   });
   el.querySelectorAll('input[type=checkbox]').forEach(cb=>{
     const key = cb.dataset.checklistKey;
+    setChecklistAriaLabel(cb);
     if(checklistState[key]) cb.checked = true;
     cb.addEventListener('change', ()=>{
       checklistState[key] = cb.checked;
